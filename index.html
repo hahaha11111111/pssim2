@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Canvas Image Merge</title>
+  <style>
+    canvas {
+      border: 0px solid black;
+    }
+  </style>
+</head>
+<body>
+  <button id="button1">Load Image 1</button>
+  <button id="button2">Load Image 2</button>
+  <button id="mergeButton">Merge Images</button>
+
+  <label for="globalAlpha1">사진1 투명도:</label>
+  <input type="number" id="globalAlpha1" style="width: 100px;" value="50" step="1">
+  <label for="globalAlpha2">사진2 투명도:</label>
+  <input type="number" id="globalAlpha2" style="width: 100px;" value="50" step="1"><br><br>
+
+  <button onclick="startMeasure()">기준길이픽셀측정</button>
+  <label for="basePixels">기준길이픽셀:</label>
+  <textarea id="basePixels" rows="1" cols="10" style="width: 100px;" readonly></textarea>
+  <label for="baseLength">기준길이cm:</label>
+  <input type="number" id="baseLength" style="width: 100px;" step="0.1"><br>
+  <button onclick="startPrediction()">예상길이픽셀측정</button>
+  <label for="predictionPixels">예상길이픽셀:</label>
+  <textarea id="predictionPixels" rows="1" cols="10" style="width: 100px;" readonly></textarea>
+  <label for="predictionLength">예상길이cm:</label>
+  <textarea id="predictionLength" rows="1" cols="10" style="width: 100px;" readonly></textarea><br>
+
+
+  <canvas id="canvas1"></canvas>
+  <canvas id="canvas2"></canvas>
+  <canvas id="canvas3"></canvas>
+
+
+
+
+  <script>
+    const canvas1 = document.getElementById('canvas1');
+    const canvas2 = document.getElementById('canvas2');
+    const canvas3 = document.getElementById('canvas3');
+    const ctx1 = canvas1.getContext('2d');
+    const ctx2 = canvas2.getContext('2d');
+    const ctx3 = canvas3.getContext('2d');
+
+    let globalAlpha1 = document.getElementById("globalAlpha1").value / 100;
+    let globalAlpha2 = document.getElementById('globalAlpha2').value / 100;
+
+
+    let image1Loaded = false;
+    let image2Loaded = false;
+    let image1, image2;
+
+    let isMeasuring = false;
+    let isPredicting = false;
+    let startX, startY, endX, endY, length;
+    let startX2, startY2, endX2, endY2, length2;
+
+
+    function startMeasure() {
+        canvas3.addEventListener('mousedown', startLine);
+        canvas3.addEventListener('mouseup', endLine);
+        canvas3.addEventListener('mousemove', drawLine);
+    }
+
+    function startLine(event) {
+        startX = event.clientX - canvas3.offsetLeft;
+        startY = event.clientY - canvas3.offsetTop;
+    }
+
+    function endLine(event) {
+        length = Math.sqrt((event.clientX - canvas3.offsetLeft - startX) ** 2 + (event.clientY - canvas3.offsetTop - startY) ** 2);
+        document.getElementById('basePixels').value = length.toFixed(2);
+
+        canvas3.removeEventListener('mousedown', startLine);
+        canvas3.removeEventListener('mouseup', endLine);
+        canvas3.removeEventListener('mousemove', drawLine);
+    }
+
+    function drawLine(event) {
+        endX = event.clientX - canvas3.offsetLeft;
+        endY = event.clientY - canvas3.offsetTop;
+        // ctx3.clearRect(0, 0, canvas3.width, canvas3.height);
+        ctx3.beginPath();
+        ctx3.moveTo(startX, startY);
+        ctx3.lineTo(endX, endY);
+        ctx3.stroke();
+    }
+
+    function startPrediction() {
+        canvas3.addEventListener('mousedown', startLine2);
+        canvas3.addEventListener('mouseup', endLine2);
+        canvas3.addEventListener('mousemove', drawLine2);
+    }
+
+    function startLine2(event) {
+        startX2 = event.clientX - canvas3.offsetLeft;
+        startY2 = event.clientY - canvas3.offsetTop;
+    }
+
+    function endLine2(event) {
+        length2 = Math.sqrt((event.clientX - canvas3.offsetLeft - startX2) ** 2 + (event.clientY - canvas3.offsetTop - startY2) ** 2);
+        const baseLength = parseFloat(document.getElementById('baseLength').value);
+        const prediction = length2 / parseFloat(document.getElementById('basePixels').value) * baseLength;
+        document.getElementById('predictionPixels').value = length2.toFixed(2);
+        document.getElementById('predictionLength').value = prediction.toFixed(2);
+        
+        canvas3.removeEventListener('mousedown', startLine2);
+        canvas3.removeEventListener('mouseup', endLine2);
+        canvas3.removeEventListener('mousemove', drawLine2);
+    }
+
+    function drawLine2(event) {   
+        endX2 = event.clientX - canvas3.offsetLeft;
+        endY2 = event.clientY - canvas3.offsetTop;
+        // ctx3.clearRect(0, 0, canvas3.width, canvas3.height);
+        ctx3.beginPath();
+        ctx3.moveTo(startX2, startY2);
+        ctx3.lineTo(endX2, endY2);
+        ctx3.stroke(); 
+    }
+
+
+
+
+
+    document.getElementById('button1').addEventListener('click', function() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = e => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = readerEvent => {
+          image1 = new Image();
+          image1.onload = function() {
+            const aspectRatio = image1.width / image1.height;
+            const width = window.innerWidth * 0.3;
+            const height = width / aspectRatio;
+            canvas1.width = width;
+            canvas1.height = height;
+            ctx1.drawImage(image1, 0, 0, width, height);
+            image1Loaded = true;
+          }
+          image1.src = readerEvent.target.result;
+        }
+      }
+      input.click();
+    });
+
+    document.getElementById('button2').addEventListener('click', function() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = e => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = readerEvent => {
+          image2 = new Image();
+          image2.onload = function() {
+            const aspectRatio = image2.width / image2.height;
+            const width = window.innerWidth * 0.3;
+            const height = width / aspectRatio;
+            canvas2.width = width;
+            canvas2.height = height;
+            ctx2.drawImage(image2, 0, 0, width, height);
+            image2Loaded = true;
+          }
+          image2.src = readerEvent.target.result;
+        }
+      }
+      input.click();
+    });
+
+    function Merge(){
+        if (image1Loaded && image2Loaded) {
+        const width = canvas1.width;
+        const height = canvas1.height;
+        canvas3.width = width;
+        canvas3.height = height;
+        ctx3.globalAlpha = globalAlpha1;
+        ctx3.drawImage(image1, 0, 0, width, height);
+        ctx3.globalAlpha = globalAlpha2;
+        ctx3.drawImage(image2, 0, 0, width, height);
+      } else {
+        alert('Please load both images first.');
+      }
+
+    }
+
+    document.getElementById('mergeButton').addEventListener('click', function() {
+        Merge();
+    });
+
+    function updateGlobalAlpha1() {
+        globalAlpha1 = document.getElementById("globalAlpha1").value / 100;
+        Merge();
+    }
+    function updateGlobalAlpha2() {
+        globalAlpha2 = document.getElementById("globalAlpha2").value / 100;
+        Merge();
+    }
+    document.getElementById("globalAlpha1").addEventListener("input", updateGlobalAlpha1);
+    document.getElementById("globalAlpha2").addEventListener("input", updateGlobalAlpha2);
+
+
+  </script>
+</body>
+</html>
